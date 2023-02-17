@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+
+}
+
+apply from: 'https://gitee.com/sunnyfor/GradleConfig/raw/master/config.gradle'
+
+android {
+    namespace 'com.sunny.gallery'
+    compileSdk project.ext.android.compileSdkVersion
+
+    defaultConfig {
+        minSdk project.ext.android.minSdkVersion
+        targetSdk project.ext.android.targetSdkVersion
+        versionCode 1
+        versionName version
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation project.ext.dependencies.coreKtx
+    implementation project.ext.dependencies.appcompat
+    implementation project.ext.dependencies.material
+    implementation project.ext.dependencies.constraintLayout
+    implementation 'com.github.Sunnyfor:ZyKit:1.0.3'
+    implementation 'com.github.Sunnyfor:ZyBase:1.0.1'
+//    implementation project(path: ':zybase')
+//    implementation project(path: ':zykit')
+    //Kotlin协程库
+    implementation project.ext.dependencies.coroutines
+    //Glide支持库
+    implementation project.ext.dependencies.glide
+}
