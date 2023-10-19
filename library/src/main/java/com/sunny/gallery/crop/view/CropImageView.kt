@@ -1,4 +1,4 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,9 +7,9 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import androidx.annotation.IntRange
 import com.sunny.kit.utils.LogUtil
-import com.sunny.gallery.crop.callback.CropBoundsChangeListener
-import com.sunny.gallery.crop.util.CubicEasing
-import com.sunny.gallery.crop.util.RectUtils
+import com.sunny.zy.crop.callback.CropBoundsChangeListener
+import com.sunny.zy.crop.util.CubicEasing
+import com.sunny.zy.crop.util.RectUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -86,7 +86,6 @@ open class CropImageView : TransformImageView {
                         it.recycle()
                     }
                     viewBitmap = resizedBitmap
-                    currentScale /= resizeScale
                 }
 
             }
@@ -146,7 +145,7 @@ open class CropImageView : TransformImageView {
                 )
                 val outStream = ByteArrayOutputStream()
                 croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outStream)
-                imageFile?.writeBytes(outStream.toByteArray())
+                imageFile.writeBytes(outStream.toByteArray())
                 croppedBitmap.recycle()
                 outStream.close()
             }
@@ -159,7 +158,7 @@ open class CropImageView : TransformImageView {
      * Cancels all current animations and sets image to fill crop area (without animation).
      * Then creates and executes [] with proper parameters.
      */
-    suspend fun saveImage(): File? {
+    suspend fun saveImage(): File {
         cancelAllAnimations()
         setImageToWrapCropBounds(false)
         return withContext(Dispatchers.IO) {
@@ -440,7 +439,7 @@ open class CropImageView : TransformImageView {
     /**
      * This method checks whether current image fills the crop bounds.
      */
-    protected val isImageWrapCropBounds: Boolean
+    private val isImageWrapCropBounds: Boolean
         get() = isImageWrapCropBounds(mCurrentImageCorners)
 
     /**
@@ -467,7 +466,6 @@ open class CropImageView : TransformImageView {
      * @param scale      - target scale
      * @param centerX    - scale center X
      * @param centerY    - scale center Y
-     * @param durationMs - zoom animation duration
      */
     protected fun zoomImageToPosition(
         scale: Float,

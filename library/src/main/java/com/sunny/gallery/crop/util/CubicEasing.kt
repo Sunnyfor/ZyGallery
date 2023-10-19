@@ -1,4 +1,4 @@
-package com.sunny.gallery.crop.util
+package com.sunny.zy.crop.util
 
 object CubicEasing {
 

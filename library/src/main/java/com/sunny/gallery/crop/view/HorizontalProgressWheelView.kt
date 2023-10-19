@@ -1,4 +1,4 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
 
 import android.content.Context
 import android.graphics.Canvas
@@ -124,10 +124,7 @@ class HorizontalProgressWheelView : View {
     }
 
     private fun onScrollEvent(event: MotionEvent, distance: Float) {
-        mTotalScrollDistance -= distance
-
-        LogUtil.i("滑动值:$mTotalScrollDistance")
-
+        mTotalScrollDistance -=distance
         postInvalidate()
         mLastTouchedPosition = event.x
         mScrollingListener?.onScroll(-distance, mTotalScrollDistance)

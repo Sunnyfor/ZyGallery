@@ -1,4 +1,4 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -12,9 +12,9 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.sunny.gallery.crop.util.RectUtils.getCenterFromRect
-import com.sunny.gallery.crop.util.RectUtils.getCornersFromRect
 import com.sunny.kit.utils.LogUtil
+import com.sunny.zy.crop.util.RectUtils.getCenterFromRect
+import com.sunny.zy.crop.util.RectUtils.getCornersFromRect
 import java.io.File
 import kotlin.math.atan2
 import kotlin.math.pow
@@ -47,10 +47,10 @@ open class TransformImageView : AppCompatImageView {
     private var mBitmapDecoded = false
     protected var mBitmapLaidOut = false
 
-    var imageFile: File? = null
+    lateinit var imageFile: File
 
-    var initWidth = 0
-    var initHeight = 0
+    private var initWidth = 0
+    private var initHeight = 0
 
     var viewBitmap: Bitmap? = null
 
@@ -117,7 +117,7 @@ open class TransformImageView : AppCompatImageView {
      * @return - current image scale value.
      * [1.0f - for original image, 2.0f - for 200% scaled image, etc.]
      */
-    var currentScale: Float = 0f
+    val currentScale: Float
         get() = getMatrixScale(mCurrentImageMatrix)
 
     /**
@@ -142,10 +142,12 @@ open class TransformImageView : AppCompatImageView {
      * This method calculates rotation angle for given Matrix object.
      */
     private fun getMatrixAngle(matrix: Matrix): Float {
-        return -(atan2(
+        val degrees = -(atan2(
             getMatrixValue(matrix, Matrix.MSKEW_X).toDouble(),
             getMatrixValue(matrix, Matrix.MSCALE_X).toDouble()
         ) * (180 / Math.PI)).toFloat()
+
+        return (degrees + 360) % 360
     }
 
     override fun setImageMatrix(matrix: Matrix) {
@@ -226,7 +228,6 @@ open class TransformImageView : AppCompatImageView {
         val drawable = drawable ?: return
         val w = drawable.intrinsicWidth.toFloat()
         val h = drawable.intrinsicHeight.toFloat()
-        LogUtil.i(TAG, String.format("Image size: [%d:%d]", w.toInt(), h.toInt()))
         val initialImageRect = RectF(0f, 0f, w, h)
         mInitialImageCorners = getCornersFromRect(initialImageRect)
         mInitialImageCenter = getCenterFromRect(initialImageRect)

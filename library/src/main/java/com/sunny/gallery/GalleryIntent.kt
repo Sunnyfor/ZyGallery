@@ -3,6 +3,7 @@ package com.sunny.gallery
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -53,12 +54,18 @@ class GalleryIntent {
         {
             if (it.resultCode == Activity.RESULT_OK) {
                 val data: ArrayList<GalleryBean> =
-                    it.data?.getParcelableArrayListExtra("data") ?: arrayListOf()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        it.data?.getParcelableArrayListExtra("data", GalleryBean::class.java)
+                            ?: arrayListOf()
+                    } else {
+                        it.data?.getParcelableArrayListExtra("data") ?: arrayListOf()
+                    }
 
                 when (resultCallBack) {
                     is GallerySelectCallback -> {
                         (resultCallBack as GallerySelectCallback).onSelectResult(data)
                     }
+
                     is GalleryPreviewCallback -> {
                         val flag = it.data?.getBooleanExtra("flag", false) ?: false
                         (resultCallBack as GalleryPreviewCallback).onResult(flag, data)

@@ -77,7 +77,7 @@ class GalleryModel {
         //所有图片
         val allPhotoFolderInfo = GalleryFolderBean(
             0,
-            ZyKit.getContext().resources.getString(R.string.allImage),
+            ZyKit.getContext().resources.getString(R.string.all_image),
             null, 0,
             arrayListOf()
         )
@@ -154,7 +154,7 @@ class GalleryModel {
         //所有视频
         val allVideoFolderInfo = GalleryFolderBean(
             0,
-            ZyKit.getContext().resources.getString(R.string.allVideo),
+            ZyKit.getContext().resources.getString(R.string.all_video),
             null, 0,
             arrayListOf()
         )

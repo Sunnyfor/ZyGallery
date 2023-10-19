@@ -273,7 +273,7 @@ class GalleryPreviewActivity : BaseActivity() {
                         ToastUtil.show(
                             String.format(
                                 getString(
-                                    R.string.maxSizeHint,
+                                    R.string.max_size_hint,
                                     maxSize.toString()
                                 )
                             )

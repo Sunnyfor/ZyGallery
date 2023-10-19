@@ -5,13 +5,13 @@
 
     <!-- Padding for both views can be different -->
 
-    <com.sunny.gallery.widget.crop.GestureCropImageView
+    <com.sunny.gallery.crop.view.GestureCropImageView
         android:id="@+id/imageViewCrop"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="@dimen/dp_16" />
 
-    <com.sunny.gallery.widget.crop.OverlayView
+    <com.sunny.gallery.crop.view.OverlayView
         android:id="@+id/viewOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -1,16 +1,21 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
+
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Region
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.annotation.ColorInt
 import androidx.annotation.IntRange
 import com.sunny.zy.R
-import com.sunny.gallery.crop.callback.OverlayViewChangeListener
-import com.sunny.gallery.crop.util.RectUtils.getCenterFromRect
-import com.sunny.gallery.crop.util.RectUtils.getCornersFromRect
+import com.sunny.zy.crop.callback.OverlayViewChangeListener
+import com.sunny.zy.crop.util.RectUtils.getCenterFromRect
+import com.sunny.zy.crop.util.RectUtils.getCornersFromRect
 import kotlin.math.pow
 import kotlin.math.sqrt
 

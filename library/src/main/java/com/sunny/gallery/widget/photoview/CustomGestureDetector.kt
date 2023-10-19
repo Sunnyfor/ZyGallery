@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 /**
  * Does a whole lot of gesture detecting.
  */
-internal class CustomGestureDetector(context: Context?, listener: OnGestureListener) {
+internal class CustomGestureDetector(context: Context, listener: OnGestureListener) {
     private val invalidPointerId = -1
     private var mActivePointerId = invalidPointerId
     private var mActivePointerIndex = 0

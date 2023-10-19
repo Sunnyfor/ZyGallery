@@ -1,4 +1,4 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
 
 import android.content.Context
 import android.util.AttributeSet
@@ -7,8 +7,7 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
-import com.sunny.gallery.crop.util.RotationGestureDetector
-import com.sunny.gallery.crop.util.RotationGestureDetector.SimpleOnRotationGestureListener
+import com.sunny.zy.crop.util.RotationGestureDetector
 import kotlin.math.pow
 
 /**
@@ -20,9 +19,9 @@ open class GestureCropImageView : CropImageView {
     private var mGestureDetector: GestureDetector? = null
     private var mMidPntX = 0f
     private var mMidPntY = 0f
-    var isRotateEnabled = false
-    var isScaleEnabled = false
-    var isGestureEnabled = false
+    var isRotateEnabled = true
+    var isScaleEnabled = true
+    var isGestureEnabled = true
     var doubleTapScaleSteps = 5
 
     constructor(context: Context) : super(context)
@@ -107,7 +106,7 @@ open class GestureCropImageView : CropImageView {
         }
     }
 
-    private inner class RotateListener : SimpleOnRotationGestureListener() {
+    private inner class RotateListener : RotationGestureDetector.SimpleOnRotationGestureListener() {
         override fun onRotation(rotationDetector: RotationGestureDetector): Boolean {
             postRotate(rotationDetector.getAngle(), mMidPntX, mMidPntY)
             return true

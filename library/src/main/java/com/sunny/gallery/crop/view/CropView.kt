@@ -1,4 +1,4 @@
-package com.sunny.gallery.widget.crop
+package com.sunny.gallery.crop.view
 
 import android.content.Context
 import android.graphics.RectF
@@ -6,8 +6,8 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.FrameLayout
 import com.sunny.gallery.R
-import com.sunny.gallery.crop.callback.CropBoundsChangeListener
-import com.sunny.gallery.crop.callback.OverlayViewChangeListener
+import com.sunny.zy.crop.callback.CropBoundsChangeListener
+import com.sunny.zy.crop.callback.OverlayViewChangeListener
 
 class CropView : FrameLayout {
 

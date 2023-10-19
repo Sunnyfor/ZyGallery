@@ -3,37 +3,36 @@ package com.sunny.gallery.select.view
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Rect
-import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.sunny.gallery.GalleryFlagBundle
 import com.sunny.gallery.GalleryIntent
 import com.sunny.gallery.R
 import com.sunny.gallery.callback.GalleryPreviewCallback
+import com.sunny.gallery.crop.CropActivity
 import com.sunny.gallery.select.adapter.GalleryContentAdapter
 import com.sunny.gallery.select.adapter.GalleryFolderAdapter
 import com.sunny.gallery.select.bean.GalleryBean
 import com.sunny.gallery.select.bean.GalleryFolderBean
 import com.sunny.gallery.select.contract.GalleryContract
-import com.sunny.kit.utils.FileUtil
-import com.sunny.kit.utils.StringUtil
 import com.sunny.kit.utils.ToastUtil
 import com.sunny.zy.base.BaseActivity
-import com.sunny.zy.utils.*
+import com.sunny.zy.utils.IntentUtil
 import com.sunny.zy.utils.permission.PermissionResult
 import com.sunny.zy.utils.permission.PermissionUtil
-import java.io.File
 
 /**
  * Desc
@@ -55,7 +54,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
     private var aspectX = 0
     private var aspectY = 0
 
-    private var fileType = FILE_TYPE_ALL
+    private var fileType = GalleryFlagBundle.FILE_TYPE_ALL
 
     private var isCrop = false
 
@@ -73,9 +72,17 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
         const val ASPECT_X_INT = "aspectX"
         const val ASPECT_Y_INT = "aspectY"
         const val FILE_TYPE_INT = "fileType"
-        const val FILE_TYPE_ALL = 0
-        const val File_TYPE_IMAGE = 1
-        const val File_TYPE_VIDEO = 2
+        const val DATA = "data"
+
+        fun getIntentUtil(activity: AppCompatActivity, flags: GalleryFlagBundle? = null): IntentUtil<List<GalleryBean>> {
+            val intentUtil = IntentUtil<List<GalleryBean>>(activity)
+            intentUtil.intent = Intent(activity, GallerySelectActivity::class.java).apply {
+                flags?.let {
+                    putExtra("flags", it.build())
+                }
+            }
+            return intentUtil
+        }
     }
 
 
@@ -95,26 +102,54 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
         GalleryIntent()
     }
 
+    private lateinit var cropLauncher: ActivityResultLauncher<Intent>
+
     override fun initLayout() = R.layout.zy_act_photo_select
 
 
-    @Suppress("UNCHECKED_CAST")
     override fun initView() {
         //初始化标题栏
         toolbar.setTitleCustom(R.layout.zy_layout_photo_select_title)
         setImmersionResource(R.color.gallery_bg)
         toolbar.getView<ImageView>(R.id.ivBack)?.setOnClickListener(this)
         toolbar.getView<ConstraintLayout>(R.id.clTitle)?.setOnClickListener(this)
-        toolbar.getView<TextView>(R.id.tvComplete)?.setOnClickListener(this)
+        val tvComplete = toolbar.getView<TextView>(R.id.tvComplete)
+        tvComplete?.setOnClickListener(this)
 
         galleryIntent.init(this)
 
         intent.getBundleExtra("flags")?.let {
-            fileType = it.getInt(FILE_TYPE_INT, FILE_TYPE_ALL)
+            fileType = it.getInt(FILE_TYPE_INT, GalleryFlagBundle.FILE_TYPE_ALL)
             isCrop = it.getBoolean(IS_CROP_BOOLEAN, false)
             aspectX = it.getInt(ASPECT_X_INT, 0)
             aspectY = it.getInt(ASPECT_Y_INT, 0)
             maxSize = it.getInt(MAX_SIZE_INT, 1)
+        }
+
+        if (isCrop) {
+            maxSize = 1
+            cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == Activity.RESULT_OK) {
+                    val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        it.data?.getParcelableExtra(DATA, GalleryBean::class.java)
+                    } else {
+                        it.data?.getParcelableExtra(DATA)
+                    }
+                    if (data != null) {
+                        galleryResultList.add(data)
+                        setResult()
+                    } else {
+                        ToastUtil.show(R.string.crop_error)
+                    }
+                }
+                finish()
+            }
+        }
+
+        if (maxSize > 1) {
+            tvComplete?.visibility = View.VISIBLE
+        } else {
+            tvComplete?.visibility = View.GONE
         }
 
         contentAdapter.isMultiple = maxSize > 1
@@ -167,7 +202,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
                     ToastUtil.show(
                         String.format(
                             getString(
-                                R.string.maxSizeHint,
+                                R.string.max_size_hint,
                                 maxSize.toString()
                             )
                         )
@@ -203,10 +238,17 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
     }
 
     override fun loadData() {
-        permissionUtil.requestPermissions(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionUtil.requestPermissions(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO
+            )
+        } else {
+            permissionUtil.requestPermissions(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+        }
     }
 
 
@@ -296,6 +338,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
             R.id.clTitle -> {
                 toggleGallery()
             }
+
             R.id.tvComplete -> {
                 if (galleryResultList.isEmpty()) {
                     return
@@ -307,7 +350,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     private fun setResult() {
         val resultIntent = Intent()
-        resultIntent.putExtra("data", galleryResultList)
+        resultIntent.putParcelableArrayListExtra(DATA, galleryResultList)
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
     }
@@ -325,50 +368,11 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
     }
 
     private fun intentCrop(data: GalleryBean) {
-        val intent = Intent("com.android.camera.action.CROP")
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        // 下面这个crop=true是设置在开启的Intent中设置显示的VIEW可裁剪
-        intent.putExtra("crop", "true")
-        intent.putExtra("scaleUpIfNeeded", true)
-        intent.putExtra("scale", true)
-        intent.setDataAndType(data.uri, "image/*")
-        if (aspectX != 0) {
-            intent.putExtra("aspectX", aspectX)
-        }
-
-        if (aspectY != 0) {
-            intent.putExtra("aspectY", aspectY)
-        }
-
-        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString())
-        intent.putExtra("return-data", false)
-        intent.putExtra("noFaceDetection", true) //
-
-        val outFile = File(FileUtil.getExternalDir(), StringUtil.getTimeStamp() + ".jpg")
-        val outUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            FileUtil.insertImage(outFile.name)
-        } else {
-            Uri.fromFile(outFile)
-        }
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, outUri)
-//        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-//            if (it.resultCode == Activity.RESULT_OK) {
-//                LogUtil.i("裁剪成功")
-//                FileUtil.cropResultGetUri(outUri, outFile)?.let { resultUri ->
-//                    outUri = resultUri
-//                }
-//                outUri?.let { uri ->
-//                    data.uri = uri
-//                }
-//                galleryResultList.add(data)
-//                IntentManager.selectResultCallBack?.invoke(galleryResultList)
-//                finish()
-//            } else {
-//                LogUtil.i("裁剪失败")
-//                LogUtil.i("uri:$outUri")
-//            }
-//        }.launch(intent)
+        val intent = Intent(this, CropActivity::class.java)
+        intent.putExtra(DATA, data)
+        intent.putExtra(ASPECT_X_INT, aspectX)
+        intent.putExtra(ASPECT_Y_INT, aspectY)
+        cropLauncher.launch(intent)
     }
 
 
@@ -376,9 +380,9 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     override fun onPermissionSuccess(successPermissions: List<String>) {
         when (fileType) {
-            FILE_TYPE_ALL -> presenter.loadImageAndVideData()
-            File_TYPE_IMAGE -> presenter.loadImageData()
-            File_TYPE_VIDEO -> presenter.loadVideoData()
+            GalleryFlagBundle.FILE_TYPE_ALL -> presenter.loadImageAndVideData()
+            GalleryFlagBundle.File_TYPE_IMAGE -> presenter.loadImageData()
+            GalleryFlagBundle.File_TYPE_VIDEO -> presenter.loadVideoData()
         }
     }
 

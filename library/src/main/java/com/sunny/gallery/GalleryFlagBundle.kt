@@ -11,6 +11,12 @@ import com.sunny.gallery.select.view.GallerySelectActivity
  */
 class GalleryFlagBundle {
 
+    companion object{
+        const val FILE_TYPE_ALL = 0
+        const val File_TYPE_IMAGE = 1
+        const val File_TYPE_VIDEO = 2
+    }
+
     private val bundle = Bundle()
 
 
@@ -35,7 +41,7 @@ class GalleryFlagBundle {
     }
 
     fun setAspectY(aspectY: Int): GalleryFlagBundle {
-        bundle.putInt(GallerySelectActivity.ASPECT_X_INT, aspectY)
+        bundle.putInt(GallerySelectActivity.ASPECT_Y_INT, aspectY)
         return this
     }
 
