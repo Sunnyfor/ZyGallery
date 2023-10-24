@@ -39,10 +39,12 @@ dependencies {
     implementation project.ext.dependencies.appcompat
     implementation project.ext.dependencies.material
     implementation project.ext.dependencies.constraintLayout
-    implementation 'com.github.Sunnyfor:ZyKit:1.0.3'
-    implementation 'com.github.Sunnyfor:ZyBase:1.0.1'
-//    implementation project(path: ':zybase')
-//    implementation project(path: ':zykit')
+//    implementation 'com.github.Sunnyfor:ZyKit:1.0.3'
+//    implementation 'com.github.Sunnyfor:ZyBase:1.0.1'
+    implementation 'com.github.Sunnyfor:ZyPlayer:1.0.1_alpha02'
+    implementation project(path: ':ZyBase')
+    implementation project(path: ':ZyKit')
+
     //Kotlin协程库
     implementation project.ext.dependencies.coroutines
     //Glide支持库

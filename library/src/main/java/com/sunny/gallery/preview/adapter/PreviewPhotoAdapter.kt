@@ -5,10 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.documentfile.provider.DocumentFile
-import com.bumptech.glide.Glide
 import com.sunny.gallery.R
 import com.sunny.gallery.select.bean.GalleryBean
 import com.sunny.kit.ZyKit
+import com.sunny.kit.utils.GlideUtil
 import com.sunny.zy.base.BaseRecycleAdapter
 import com.sunny.zy.base.BaseRecycleViewHolder
 
@@ -20,15 +20,13 @@ import com.sunny.zy.base.BaseRecycleViewHolder
  */
 class PreviewPhotoAdapter(data: ArrayList<GalleryBean>) : BaseRecycleAdapter<GalleryBean>(data) {
 
-    var selectBean: GalleryBean? = null
+    var selectIndex: Int = -1
 
     override fun onBindViewHolder(holder: BaseRecycleViewHolder, position: Int) {
-        Glide.with(context)
-            .load(getData(position).uri)
-            .into(holder.getView(R.id.ivPhoto))
+        GlideUtil.loadImage(holder.getView(R.id.ivPhoto), getData(position).uri ?: "")
 
         val vBorder = holder.getView<View>(R.id.vBorder)
-        vBorder.visibility = if (selectBean == getData(position)) {
+        vBorder.visibility = if (selectIndex == position) {
             View.VISIBLE
         } else {
             View.GONE

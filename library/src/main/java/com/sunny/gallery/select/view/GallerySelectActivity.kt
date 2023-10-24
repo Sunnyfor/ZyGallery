@@ -18,17 +18,18 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.sunny.gallery.GalleryFlagBundle
-import com.sunny.gallery.GalleryIntent
+import com.sunny.gallery.GalleryPreviewBundle
+import com.sunny.gallery.GallerySelectBundle
 import com.sunny.gallery.R
-import com.sunny.gallery.callback.GalleryPreviewCallback
 import com.sunny.gallery.crop.CropActivity
+import com.sunny.gallery.preview.view.GalleryPreviewActivity
 import com.sunny.gallery.select.adapter.GalleryContentAdapter
 import com.sunny.gallery.select.adapter.GalleryFolderAdapter
 import com.sunny.gallery.select.bean.GalleryBean
 import com.sunny.gallery.select.bean.GalleryFolderBean
 import com.sunny.gallery.select.contract.GalleryContract
 import com.sunny.kit.utils.ToastUtil
+import com.sunny.zy.ZyFrameStore
 import com.sunny.zy.base.BaseActivity
 import com.sunny.zy.utils.IntentUtil
 import com.sunny.zy.utils.permission.PermissionResult
@@ -40,8 +41,20 @@ import com.sunny.zy.utils.permission.PermissionUtil
  * Mail sunnyfor98@gmail.com
  * Date 2021/9/22 17:12
  */
-class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPreviewCallback,
+class GallerySelectActivity : BaseActivity(), GalleryContract.IView, IntentUtil.IntentResultCallback<GalleryPreviewBundle.Result>,
     PermissionResult {
+
+    companion object {
+        fun getIntentUtil(activity: AppCompatActivity, flags: GallerySelectBundle? = null): IntentUtil<List<GalleryBean>> {
+            val intentUtil = IntentUtil<List<GalleryBean>>(activity)
+            intentUtil.intent = Intent(activity, GallerySelectActivity::class.java).apply {
+                flags?.let {
+                    putExtra(IntentUtil.NAME, it.build())
+                }
+            }
+            return intentUtil
+        }
+    }
 
     private val galleryResultList = arrayListOf<GalleryBean>()
 
@@ -54,7 +67,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
     private var aspectX = 0
     private var aspectY = 0
 
-    private var fileType = GalleryFlagBundle.FILE_TYPE_ALL
+    private var fileType = GallerySelectBundle.FILE_TYPE_ALL
 
     private var isCrop = false
 
@@ -64,25 +77,6 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     private val permissionUtil by lazy {
         PermissionUtil(this)
-    }
-
-    companion object {
-        const val MAX_SIZE_INT = "maxSize"
-        const val IS_CROP_BOOLEAN = "isCrop"
-        const val ASPECT_X_INT = "aspectX"
-        const val ASPECT_Y_INT = "aspectY"
-        const val FILE_TYPE_INT = "fileType"
-        const val DATA = "data"
-
-        fun getIntentUtil(activity: AppCompatActivity, flags: GalleryFlagBundle? = null): IntentUtil<List<GalleryBean>> {
-            val intentUtil = IntentUtil<List<GalleryBean>>(activity)
-            intentUtil.intent = Intent(activity, GallerySelectActivity::class.java).apply {
-                flags?.let {
-                    putExtra("flags", it.build())
-                }
-            }
-            return intentUtil
-        }
     }
 
 
@@ -98,9 +92,8 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
         findViewById<RecyclerView>(R.id.rvContent)
     }
 
-    private val galleryIntent by lazy {
-        GalleryIntent()
-    }
+    private lateinit var preViewIntent: IntentUtil<GalleryPreviewBundle.Result>
+    private val galleryPreviewBundle = GalleryPreviewBundle()
 
     private lateinit var cropLauncher: ActivityResultLauncher<Intent>
 
@@ -116,14 +109,12 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
         val tvComplete = toolbar.getView<TextView>(R.id.tvComplete)
         tvComplete?.setOnClickListener(this)
 
-        galleryIntent.init(this)
-
-        intent.getBundleExtra("flags")?.let {
-            fileType = it.getInt(FILE_TYPE_INT, GalleryFlagBundle.FILE_TYPE_ALL)
-            isCrop = it.getBoolean(IS_CROP_BOOLEAN, false)
-            aspectX = it.getInt(ASPECT_X_INT, 0)
-            aspectY = it.getInt(ASPECT_Y_INT, 0)
-            maxSize = it.getInt(MAX_SIZE_INT, 1)
+        intent.getBundleExtra(IntentUtil.NAME)?.let {
+            fileType = it.getInt(GallerySelectBundle.FILE_TYPE_INT, GallerySelectBundle.FILE_TYPE_ALL)
+            isCrop = it.getBoolean(GallerySelectBundle.IS_CROP_BOOLEAN, false)
+            aspectX = it.getInt(GallerySelectBundle.ASPECT_X_INT, 0)
+            aspectY = it.getInt(GallerySelectBundle.ASPECT_Y_INT, 0)
+            maxSize = it.getInt(GallerySelectBundle.MAX_SIZE_INT, 1)
         }
 
         if (isCrop) {
@@ -131,9 +122,9 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
             cropLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
                 if (it.resultCode == Activity.RESULT_OK) {
                     val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        it.data?.getParcelableExtra(DATA, GalleryBean::class.java)
+                        it.data?.getParcelableExtra(ZyFrameStore.DATA, GalleryBean::class.java)
                     } else {
-                        it.data?.getParcelableExtra(DATA)
+                        it.data?.getParcelableExtra(ZyFrameStore.DATA)
                     }
                     if (data != null) {
                         galleryResultList.add(data)
@@ -211,6 +202,8 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
             }
         }
 
+        preViewIntent = GalleryPreviewActivity.getIntentUtil(this, galleryPreviewBundle)
+
         contentAdapter.setOnItemClickListener { _, position ->
 
             val data = contentAdapter.getData(position)
@@ -227,13 +220,16 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
             val dataList = contentAdapter.getData()
 
-            galleryIntent.startGallerySelectPreview(
-                dataList,
-                galleryResultList,
-                position,
-                maxSize,
-                this
-            )
+            galleryPreviewBundle
+                .clear()
+                .setDataList(dataList)
+                .setSelectList(galleryResultList)
+                .setIndex(position)
+                .setPreviewType(GalleryPreviewBundle.TYPE_SELECT)
+                .setMaxSize(maxSize)
+
+            preViewIntent.intent(this)
+
         }
     }
 
@@ -350,7 +346,7 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     private fun setResult() {
         val resultIntent = Intent()
-        resultIntent.putParcelableArrayListExtra(DATA, galleryResultList)
+        resultIntent.putParcelableArrayListExtra(ZyFrameStore.DATA, galleryResultList)
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
     }
@@ -369,9 +365,9 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     private fun intentCrop(data: GalleryBean) {
         val intent = Intent(this, CropActivity::class.java)
-        intent.putExtra(DATA, data)
-        intent.putExtra(ASPECT_X_INT, aspectX)
-        intent.putExtra(ASPECT_Y_INT, aspectY)
+        intent.putExtra(ZyFrameStore.DATA, data)
+        intent.putExtra(GallerySelectBundle.ASPECT_X_INT, aspectX)
+        intent.putExtra(GallerySelectBundle.ASPECT_Y_INT, aspectY)
         cropLauncher.launch(intent)
     }
 
@@ -380,21 +376,20 @@ class GallerySelectActivity : BaseActivity(), GalleryContract.IView, GalleryPrev
 
     override fun onPermissionSuccess(successPermissions: List<String>) {
         when (fileType) {
-            GalleryFlagBundle.FILE_TYPE_ALL -> presenter.loadImageAndVideData()
-            GalleryFlagBundle.File_TYPE_IMAGE -> presenter.loadImageData()
-            GalleryFlagBundle.File_TYPE_VIDEO -> presenter.loadVideoData()
+            GallerySelectBundle.FILE_TYPE_ALL -> presenter.loadImageAndVideData()
+            GallerySelectBundle.File_TYPE_IMAGE -> presenter.loadImageData()
+            GallerySelectBundle.File_TYPE_VIDEO -> presenter.loadVideoData()
         }
     }
 
+
     /**
      * 预览结果处理
-     * @param flag 是否处理结果
      */
-    override fun onResult(flag: Boolean, resultList: ArrayList<GalleryBean>) {
+    override fun onResult(result: GalleryPreviewBundle.Result?) {
         galleryResultList.clear()
-        galleryResultList.addAll(resultList)
-
-        if (flag) {
+        galleryResultList.addAll(result?.resultList ?: arrayListOf())
+        if (result?.isComplete == true) {
             setResult()
         } else {
             contentAdapter.notifyItemRangeChanged(0, contentAdapter.itemCount)

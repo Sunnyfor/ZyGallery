@@ -9,13 +9,15 @@ import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.sunny.gallery.GallerySelectBundle
 import com.sunny.gallery.R
 import com.sunny.gallery.crop.view.CropView
 import com.sunny.gallery.crop.view.HorizontalProgressWheelView
 import com.sunny.gallery.crop.view.TransformImageView
 import com.sunny.gallery.select.bean.GalleryBean
-import com.sunny.gallery.select.view.GallerySelectActivity
 import com.sunny.kit.utils.FileUtil
+import com.sunny.kit.utils.UriUtil
+import com.sunny.zy.ZyFrameStore
 import com.sunny.zy.base.BaseActivity
 import com.sunny.zy.base.BasePresenter
 import com.sunny.zy.base.IBaseView
@@ -57,18 +59,18 @@ class CropActivity : BaseActivity(), TransformImageView.TransformImageListener {
 
     private val data: GalleryBean? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(GallerySelectActivity.DATA, GalleryBean::class.java)
+            intent.getParcelableExtra(ZyFrameStore.DATA, GalleryBean::class.java)
         } else {
-            intent.getParcelableExtra(GallerySelectActivity.DATA)
+            intent.getParcelableExtra(ZyFrameStore.DATA)
         }
     }
 
     private val aspectX by lazy {
-        intent.getIntExtra(GallerySelectActivity.ASPECT_X_INT, 0)
+        intent.getIntExtra(GallerySelectBundle.ASPECT_X_INT, 0)
     }
 
     private val aspectY by lazy {
-        intent.getIntExtra(GallerySelectActivity.ASPECT_Y_INT, 0)
+        intent.getIntExtra(GallerySelectBundle.ASPECT_Y_INT, 0)
     }
 
     override fun initLayout() = R.layout.zy_act_crop
@@ -100,9 +102,9 @@ class CropActivity : BaseActivity(), TransformImageView.TransformImageListener {
                 val resultFile = cropView.mGestureCropImageView.saveImage()
                 hideLoading()
                 val intent = Intent()
-                intent.putExtra(GallerySelectActivity.DATA, data?.apply {
+                intent.putExtra(ZyFrameStore.DATA, data?.apply {
                     this.id = 0
-                    this.uri = FileUtil.getUriFromPath(resultFile.path)
+                    this.uri = UriUtil.getUriFromPath(resultFile.path)
                     this.type = "image/jpeg"
                     this.duration = 0
                     this.size = resultFile.length()
@@ -118,7 +120,7 @@ class CropActivity : BaseActivity(), TransformImageView.TransformImageListener {
 
         val inputStream = contentResolver.openInputStream(uri)
         val fileName = data?.name ?: "${System.currentTimeMillis()}.temp"
-        val privateFile = File(FileUtil.getExternalDir(), fileName)
+        val privateFile = File(FileUtil.getExternalFilesDir(), fileName)
         if (privateFile.exists()) {
             privateFile.delete()
         }

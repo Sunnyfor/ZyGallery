@@ -5,12 +5,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.bumptech.glide.Glide
 import com.sunny.gallery.R
 import com.sunny.gallery.select.bean.GalleryBean
 import com.sunny.gallery.widget.photoview.PhotoView
+import com.sunny.kit.utils.GlideUtil
 import com.sunny.zy.base.BaseRecycleAdapter
 import com.sunny.zy.base.BaseRecycleViewHolder
+import com.sunny.zyplayer.activity.VideoActivity
+import com.sunny.zyplayer.bean.ZyVideoBean
 
 
 /**
@@ -29,20 +31,19 @@ class PhotoPreviewPageAdapter(data: ArrayList<GalleryBean>) :
         when (holder.itemView) {
             is PhotoView -> {
                 val photoView = holder.itemView as PhotoView
-                photoView.setImageURI(getData(position).uri)
-//                Glide.with(context)
-//                    .load()
-//                    .into(photoView as ImageView)
+                GlideUtil.loadDrawable(photoView, getData(position).uri ?: "") {
+                    photoView.setImageDrawable(it)
+                }
             }
+
             is ConstraintLayout -> {
                 val ivPhoto: ImageView = holder.getView(R.id.ivPhoto)
-                Glide.with(context)
-                    .load(getData(position).uri)
-                    .into(ivPhoto)
+                GlideUtil.loadImage(ivPhoto, getData(position).uri ?: "")
                 holder.getView<View>(R.id.vPlay).setOnClickListener {
-//                    VideoPlayActivity.intent(
-//                        context as BaseActivity, null, getData(position).uri ?: return@setOnClickListener,
-//                    )
+                    getData(position).uri?.let {
+                        val videoBean = ZyVideoBean(it)
+                        VideoActivity.intent(context, "视频", videoBean)
+                    }
                 }
             }
         }

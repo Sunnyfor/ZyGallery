@@ -5,23 +5,27 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Rect
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
+import com.sunny.gallery.GalleryPreviewBundle
+import com.sunny.gallery.GallerySelectBundle
 import com.sunny.gallery.R
 import com.sunny.gallery.preview.adapter.PhotoPreviewPageAdapter
 import com.sunny.gallery.preview.adapter.PreviewPhotoAdapter
 import com.sunny.gallery.select.bean.GalleryBean
 import com.sunny.kit.utils.DensityUtil
 import com.sunny.kit.utils.ToastUtil
+import com.sunny.zy.ZyFrameStore
 import com.sunny.zy.base.BaseActivity
+import com.sunny.zy.utils.IntentUtil
 
 
 /**
@@ -33,9 +37,16 @@ import com.sunny.zy.base.BaseActivity
 class GalleryPreviewActivity : BaseActivity() {
 
     companion object {
-        const val TYPE_SELECT = 0
-        const val TYPE_PREVIEW = 1
-        const val TYPE_CAMERA = 2
+
+        fun getIntentUtil(activity: AppCompatActivity, flags: GalleryPreviewBundle? = null): IntentUtil<GalleryPreviewBundle.Result> {
+            val intentUtil = IntentUtil<GalleryPreviewBundle.Result>(activity)
+            intentUtil.intent = Intent(activity, GalleryPreviewActivity::class.java).apply {
+                flags?.let {
+                    putExtra(IntentUtil.NAME, it.build())
+                }
+            }
+            return intentUtil
+        }
     }
 
 
@@ -45,13 +56,9 @@ class GalleryPreviewActivity : BaseActivity() {
 
     private val selectList = arrayListOf<GalleryBean>()
 
-    private val type by lazy {
-        intent.getIntExtra("type", TYPE_SELECT)
-    }
+    private var previewType = GalleryPreviewBundle.TYPE_PREVIEW
 
-    private val isDelete by lazy {
-        intent.getBooleanExtra("isDelete", false)
-    }
+    private var isDelete = false
 
     private val vStatusBar by lazy {
         findViewById<View>(R.id.statusBar)
@@ -127,33 +134,41 @@ class GalleryPreviewActivity : BaseActivity() {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
+
         hideStatusBar()
         vStatusBar.layoutParams.height = DensityUtil.getStatusBarHeight()
-        index = intent.getIntExtra("index", 0)
-        maxSize = intent.getIntExtra("maxSize", 0)
-        dataList.addAll(
-            intent.getParcelableArrayListExtra("dataList") ?: arrayListOf()
-        )
-        selectList.addAll(
-            intent.getParcelableArrayListExtra("selectList") ?: arrayListOf()
-        )
+
+        intent.getBundleExtra(IntentUtil.NAME)?.let {
+            previewType = it.getInt(GalleryPreviewBundle.PREVIEW_TYPE, GalleryPreviewBundle.TYPE_PREVIEW)
+            isDelete = it.getBoolean(GalleryPreviewBundle.IS_DELETE)
+            index = it.getInt(GalleryPreviewBundle.INDEX, 0)
+            maxSize = it.getInt(GallerySelectBundle.MAX_SIZE_INT, 0)
+
+            it.getStringArrayList(GalleryPreviewBundle.URL_DATA)?.forEach { url ->
+                dataList.add(GalleryBean(uri = url.toUri()))
+            }
+            dataList.addAll(it.getParcelableArrayList(ZyFrameStore.DATA) ?: arrayListOf())
+            selectList.addAll(it.getParcelableArrayList(GalleryPreviewBundle.SELECT_DATA) ?: arrayListOf())
+        }
 
         updateTitle()
 
-        when (type) {
-            TYPE_CAMERA -> {
+        when (previewType) {
+            GalleryPreviewBundle.TYPE_CAMERA -> {
                 tvComplete.visibility = View.VISIBLE
             }
 
-            TYPE_PREVIEW -> {
+            GalleryPreviewBundle.TYPE_PREVIEW -> {
                 if (isDelete) {
                     ivDelete.visibility = View.VISIBLE
                 }
             }
-            TYPE_SELECT -> {
+
+            GalleryPreviewBundle.TYPE_SELECT -> {
                 tvComplete.visibility = View.VISIBLE
                 clSelect.visibility = View.VISIBLE
                 rvPreview.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+                rvPreview.itemAnimator = null
                 rvPreview.addItemDecoration(object : RecyclerView.ItemDecoration() {
                     override fun getItemOffsets(
                         outRect: Rect,
@@ -166,12 +181,14 @@ class GalleryPreviewActivity : BaseActivity() {
                                 outRect.left =
                                     resources.getDimension(com.sunny.zy.R.dimen.dp_8).toInt()
                             }
+
                             selectList.size - 1 -> {
                                 outRect.right =
                                     resources.getDimension(com.sunny.zy.R.dimen.dp_8).toInt()
                                 outRect.left =
                                     resources.getDimension(com.sunny.zy.R.dimen.dp_16).toInt()
                             }
+
                             else -> {
                                 outRect.left =
                                     resources.getDimension(com.sunny.zy.R.dimen.dp_16).toInt()
@@ -180,7 +197,7 @@ class GalleryPreviewActivity : BaseActivity() {
                     }
                 })
 
-                previewAdapter.selectBean = dataList[index]
+                previewAdapter.selectIndex = index
                 rvPreview.adapter = previewAdapter
                 updateChecked()
             }
@@ -192,7 +209,7 @@ class GalleryPreviewActivity : BaseActivity() {
                     clTitle.visibility = View.GONE
                     vStatusBar.visibility = View.GONE
                     window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                    if (type == TYPE_SELECT) {
+                    if (previewType == GalleryPreviewBundle.TYPE_SELECT) {
                         clPreview.visibility = View.GONE
                         clSelect.visibility = View.GONE
                     }
@@ -201,7 +218,7 @@ class GalleryPreviewActivity : BaseActivity() {
                     clTitle.visibility = View.VISIBLE
                     vStatusBar.visibility = View.VISIBLE
                     window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                    if (type == TYPE_SELECT) {
+                    if (previewType == GalleryPreviewBundle.TYPE_SELECT) {
                         if (selectList.isNotEmpty()) {
                             clPreview.visibility = View.VISIBLE
                         }
@@ -215,9 +232,11 @@ class GalleryPreviewActivity : BaseActivity() {
             @SuppressLint("NotifyDataSetChanged")
             override fun onPageSelected(position: Int) {
                 index = position
-                if (type == TYPE_SELECT) {
-                    previewAdapter.selectBean = dataList[index]
-                    previewAdapter.notifyDataSetChanged()
+                if (previewType == GalleryPreviewBundle.TYPE_SELECT) {
+                    val lastIndex = previewAdapter.selectIndex
+                    previewAdapter.selectIndex = selectList.indexOf(dataList[position])
+                    previewAdapter.notifyItemChanged(lastIndex)
+                    previewAdapter.notifyItemChanged(previewAdapter.selectIndex)
                 }
                 updateTitle()
                 updateChecked()
@@ -240,7 +259,7 @@ class GalleryPreviewActivity : BaseActivity() {
             R.id.clTitle, R.id.clSelect -> {}
             R.id.tvComplete -> {
 
-                if (type == TYPE_CAMERA) {
+                if (previewType == GalleryPreviewBundle.TYPE_CAMERA) {
                     setResult(true)
                     return
                 }
@@ -250,9 +269,7 @@ class GalleryPreviewActivity : BaseActivity() {
                     updateChecked()
                     previewAdapter.notifyItemInserted(0)
                 }
-                Handler(Looper.getMainLooper()).postDelayed({
-                    setResult(true)
-                }, 100)
+                setResult(true)
             }
 
             R.id.ivDelete -> {
@@ -266,6 +283,7 @@ class GalleryPreviewActivity : BaseActivity() {
                     updateTitle()
                 }
             }
+
             R.id.ivSelect, R.id.tvSelect -> {
                 if (!selectList.contains(dataList[index])) {
 
@@ -281,11 +299,15 @@ class GalleryPreviewActivity : BaseActivity() {
                         return
                     }
                     selectList.add(dataList[index])
-                    previewAdapter.notifyItemInserted(selectList.size - 1)
+                    val lastIndex = previewAdapter.selectIndex
+                    previewAdapter.selectIndex = selectList.size - 1
+                    previewAdapter.notifyItemChanged(lastIndex)
+                    previewAdapter.notifyItemInserted(previewAdapter.selectIndex)
                 } else {
                     val index = selectList.indexOf(dataList[index])
                     selectList.removeAt(index)
                     previewAdapter.notifyItemRemoved(index)
+                    previewAdapter.selectIndex = -1
                     previewAdapter.notifyItemRangeChanged(index, selectList.size)
                 }
                 updateTitle()
@@ -296,8 +318,10 @@ class GalleryPreviewActivity : BaseActivity() {
 
     private fun setResult(flag: Boolean = false) {
         val intent = Intent()
-        intent.putExtra("flag", flag)
-        intent.putExtra("data", selectList)
+        val result = GalleryPreviewBundle.Result()
+        result.resultList = selectList
+        result.isComplete = flag
+        intent.putExtra("data", result)
         setResult(Activity.RESULT_OK, intent)
         finish()
     }

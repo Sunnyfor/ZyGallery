@@ -13,6 +13,7 @@ import android.os.Parcelable
 class GalleryBean(var id: Long = 0, var uri: Uri?) : Parcelable {
     var name = ""
     var type = ""
+    var url = ""
     var duration = 0
     var size = 0L
 
@@ -22,6 +23,7 @@ class GalleryBean(var id: Long = 0, var uri: Uri?) : Parcelable {
     ) {
         name = parcel.readString() ?: ""
         type = parcel.readString() ?: ""
+        url = parcel.readString() ?: ""
         duration = parcel.readInt()
         size = parcel.readLong()
     }
@@ -32,6 +34,7 @@ class GalleryBean(var id: Long = 0, var uri: Uri?) : Parcelable {
         parcel.writeParcelable(uri, flags)
         parcel.writeString(name)
         parcel.writeString(type)
+        parcel.writeString(url)
         parcel.writeInt(duration)
         parcel.writeLong(size)
     }
@@ -41,9 +44,7 @@ class GalleryBean(var id: Long = 0, var uri: Uri?) : Parcelable {
     }
 
 
-    override fun toString(): String {
-        return "GalleryBean(id=$id, uri=$uri, name='$name', type='$type', duration=$duration, size=$size)"
-    }
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -65,6 +66,10 @@ class GalleryBean(var id: Long = 0, var uri: Uri?) : Parcelable {
         result = 31 * result + name.hashCode()
         result = 31 * result + type.hashCode()
         return result
+    }
+
+    override fun toString(): String {
+        return "GalleryBean(id=$id, uri=$uri, name='$name', type='$type', url='$url', duration=$duration, size=$size)"
     }
 
     companion object CREATOR : Parcelable.Creator<GalleryBean> {
